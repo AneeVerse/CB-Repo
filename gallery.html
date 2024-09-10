@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Gallery View with Filters</title>
+    <style>
+        body {
+            display: flex;
+        }
+        .sidebar {
+            width: 200px;
+            padding: 20px;
+            background-color: #f4f4f4;
+            height: 100vh;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .sidebar ul li {
+            margin: 10px 0;
+        }
+        .sidebar ul li a,
+        .sidebar ul li select {
+            display: block;
+            padding: 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .sidebar ul li a.active {
+            color: #0056b3;
+            font-weight: bold;
+        }
+        .sub-filters {
+            display: none;
+            margin-top: 10px;
+        }
+        .sub-filters select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            margin-left: 20px;
+        }
+        .gallery-item {
+            width: 200px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: auto;
+        }
+        .gallery-item iframe {
+            width: 100%;
+            height: 150px;
+        }
+        .details {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            text-align: left;
+        }
+        .details div {
+            width: 48%;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <ul>
+        <li><a href="#" class="filter-link active" data-filter="all">All</a></li>
+        <li>
+            <a href="#" class="filter-link" data-filter="video">Video</a>
+            <div class="sub-filters" id="style-filters">
+                <select id="style-dropdown">
+                    <option value="">Select Style</option>
+                </select>
+            </div>
+        </li>
+        <li><a href="#" class="filter-link" data-filter="design">Design</a></li>
+    </ul>
+</div>
+
+<div class="gallery" id="gallery"></div>
+
+<script>
+    const apiKey = 'AIzaSyD6eZyCuemhSnLp1V0gjggdUfIcHUGfPaI'; // Replace with your Google Sheets API key
+    const sheetId = '1v1Ax6x3XeLC-cMoEE3qEcWO9D-HCEISuLLWbmyiI2Po'; // Replace with your Google Sheet ID
+    let allItems = [];
+    let videoStyles = new Set();
+
+    async function fetchSheetData() {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A2:I?key=${apiKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        return data.values;
+    }
+
+    function createGalleryItem(item) {
+        const [videoDesign, clientName, videoDesignName, assetType, style, assetImgLink, format, , fileLink] = item;
+
+        const galleryItem = document.createElement('div');
+        galleryItem.classList.add('gallery-item');
+        galleryItem.dataset.format = format.toLowerCase();
+
+        // Check if the format is a Vimeo link
+        if (format === 'Video' && assetImgLink.includes('player.vimeo.com')) {
+            const iframe = document.createElement('iframe');
+            iframe.src = assetImgLink;
+            iframe.frameBorder = '0';
+            iframe.allow = 'autoplay; fullscreen';
+            iframe.width = '100%';
+            iframe.height = '150px';
+            galleryItem.appendChild(iframe);
+        } else if (format === 'Image') {
+            const img = document.createElement('img');
+            img.src = assetImgLink;
+            galleryItem.appendChild(img);
+        } else if (format === 'Video') {
+            const video = document.createElement('video');
+            video.src = assetImgLink;
+            video.controls = true;
+            galleryItem.appendChild(video);
+        } else if (['PDF', 'Figma', 'PPT'].includes(format)) {
+            const link = document.createElement('a');
+            link.href = assetImgLink;
+            link.textContent = `View ${format}`;
+            link.target = '_blank';
+            galleryItem.appendChild(link);
+        }
+
+        const details = document.createElement('div');
+        details.classList.add('details');
+        details.innerHTML = `
+            <div><strong>Client:</strong> ${clientName}</div>
+            <div><strong>Design:</strong> ${videoDesignName}</div>
+            <div><strong>Type:</strong> ${assetType}</div>
+            <div><strong>Style:</strong> ${style}</div>
+            <div><strong>Format:</strong> ${format}</div>
+        `;
+        galleryItem.appendChild(details);
+
+        return galleryItem;
+    }
+
+    function renderGallery(items) {
+        const gallery = document.getElementById('gallery');
+        gallery.innerHTML = ''; // Clear gallery
+        items.forEach(item => {
+            gallery.appendChild(item);
+        });
+    }
+
+    function renderStyleFilters(styles) {
+        const styleDropdown = document.getElementById('style-dropdown');
+        styleDropdown.innerHTML = '<option value="">Select Style</option>'; // Reset options
+        styles.forEach(style => {
+            const option = document.createElement('option');
+            option.value = style.toLowerCase();
+            option.textContent = style;
+            styleDropdown.appendChild(option);
+        });
+        document.getElementById('style-filters').style.display = 'block'; // Show sub-filters
+    }
+
+    function filterGallery(filter, style = null) {
+        let filteredItems;
+        if (filter === 'all') {
+            filteredItems = allItems;
+        } else if (filter === 'video') {
+            filteredItems = allItems.filter(item => item.dataset.format === 'video');
+            if (style) {
+                filteredItems = filteredItems.filter(item => item.querySelector('.details div:nth-child(4)').textContent.includes(style));
+            }
+        } else if (filter === 'design') {
+            filteredItems = allItems.filter(item => ['image', 'pdf', 'figma', 'ppt'].includes(item.dataset.format));
+        }
+        renderGallery(filteredItems);
+    }
+
+    // Fetch and render data
+    fetchSheetData().then(data => {
+        allItems = data.map(item => createGalleryItem(item));
+        renderGallery(allItems);
+
+        // Collect unique video styles
+        data.forEach(item => {
+            const [, , , , style, , format] = item;
+            if (format === 'Video' && style) {
+                videoStyles.add(style);
+            }
+        });
+
+        // Render style filters for videos
+        renderStyleFilters(Array.from(videoStyles));
+    });
+
+    // Add event listeners to filter links
+    document.querySelectorAll('.filter-link').forEach(link => {
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+            document.querySelectorAll('.filter-link').forEach(link => link.classList.remove('active'));
+            link.classList.add('active');
+            const filter = link.dataset.filter;
+            if (filter === 'video') {
+                // Show style dropdown when video filter is selected
+                document.getElementById('style-filters').style.display = 'block';
+            } else {
+                // Hide style dropdown for other filters
+                document.getElementById('style-filters').style.display = 'none';
+            }
+            filterGallery(filter);
+        });
+    });
+
+    // Add event listener to style dropdown
+    document.getElementById('style-dropdown').addEventListener('change', (event) => {
+        const selectedStyle = event.target.value;
+        filterGallery('video', selectedStyle);
+    });
+</script>
+
+</body>
+</html>
