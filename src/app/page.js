@@ -194,8 +194,6 @@ export default function Home() {
               <IoMdOpen  className="self-center h-[18px] w-[18px]"/>
 
             </Link>} 
-
-            
             {/* Display image, video, or PDF */}
             {item[6] === "PDF" ? (
               <div className="h-[300px] w-full relative border-[5px] border-white mb-[15px] "> {/* Larger height for PDF */}
