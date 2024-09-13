@@ -190,10 +190,12 @@ export default function Home() {
             className={`bg-white h-auto px-4 py-4 relative rounded-lg break-inside-avoid shadow-lg  border-[2px] border-[#c35de3]`}
           >
            
-       {item[8] &&    <Link href={item[8]} target="_blank" className="absolute flex gap-1 top-[28px] items-center right-6 text-sm rounded-lg text-white px-3 py-2 border-[3px] border-white bg-[#c35de3] font-semibold z-30">{item[6].toUpperCase()}
+       {item[8] &&    <Link href={item[8]} target="_blank" className="absolute flex gap-1 top-[28px] items-center right-7 text-sm rounded-lg text-white px-3 py-2 border-[3px] border-white bg-[#c35de3] font-semibold z-30">{item[6].toUpperCase()}
               <IoMdOpen  className="self-center h-[18px] w-[18px]"/>
 
             </Link>} 
+
+            
             {/* Display image, video, or PDF */}
             {item[6] === "PDF" ? (
               <div className="h-[300px] w-full relative border-[5px] border-white mb-[15px] "> {/* Larger height for PDF */}
